@@ -157,30 +157,48 @@ elif option == "Search Players":
             if any(name.upper() in n for n in possible_names):
                 found = True
                 with (st.expander(f"{full_name} ({team} - {pos})")):
-                    st.write("Player", i)
+                    # st.write("Player", i)
                     # if st.button("***:rainbow[COMPARE PLAYER]***"):
                     # st.balloons()
                     st.write("**Full name:**", full_name)
-                    st.write("**Team:**", team)
-                    st.write("**Position:**", pos)
-                    st.write("**Price:**", price +"m")
-                    st.write("---")
+                    col7, col8, col9 = st.columns(3)
+                    with col7:
+                        st.write("**Team:**", team)
+                    with col8:
+                        st.write("**Position:**", pos)
+                    with col9:
+                        st.write("**Price:**", "£" + price + "m")
+
+                    st.markdown("---")
                     st.subheader("*FPL indicators:*")
-                    st.metric("Selected rank", selected_rank)
-                    st.write("**Selected by:**", selected, "%")
-                    st.metric("PPG rank", ppg_rank)
-                    st.write("**Points per game:**", ppg)
-                    st.metric("Form rank", form_rank)
-                    st.write("**Form:**", form)
-                    st.write("---")
+
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Selected rank", selected_rank)
+                        st.write("**Selected by:**", selected, "%")
+                    with col2:
+                        st.metric("PPG rank", ppg_rank)
+                        st.write("**Points per game:**", ppg)
+                    with col3:
+                        st.metric("Form rank", form_rank)
+                        st.write("**Form:**", form)
+
+                    st.markdown("---")
                     st.subheader("*[LAST SEASON] Football stats:*")
-                    st.write("**Starts:**", starts)
-                    st.write("**Number of full 90s completed:**", number90s)
-                    st.write("**G/A:**", g_a)
-                    st.write("**Goals:**", goals)
-                    st.write("**xG:**", xG)
-                    st.write("**Assists:**", assists)
-                    st.write("**xA:**", xA)
+
+                    col4, col5, col6 = st.columns(3)
+                    with col4:
+                        st.write("**Starts:**", starts)
+                        st.write("**Full 90s completed:**", number90s)
+                    with col5:
+                        st.write("**Goals:**", goals)
+                        st.write("**xG:**", xG)
+                    with col6:
+                        st.write("**Assists:**", assists)
+                        st.write("**xA:**", xA)
+
+                    st.write("**Total G/A:**", g_a)
+                    st.markdown("---")
         if found:
             st.markdown(
                 """
