@@ -27,6 +27,16 @@ if option == "Home":
     st.write("Use the sidebar to navigate to different features.")
     if st.button("***:rainbow[Send balloons!]***"):
         st.balloons()
+    if st.button("***:rainbow[Send stars!]***"):
+        youtube_url = "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+        st.markdown(
+            """
+            <iframe width="560" height="315" 
+            src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" 
+            frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            """,
+            unsafe_allow_html=True
+        )
     colour = st.color_picker("Pick a color")
     st.write("---")
     st.slider("Pick a number", 0.0, 14.5, 0.1)
@@ -149,17 +159,12 @@ elif option == "Search Players":
                 another_alt_last_name.upper()
             ]
 
-            # team_pos = str(teams_df["position"][team_id])
-
             team = str(teams_df["name"][team_id - 1])
-           # if any(name.upper() in n for n in possible_names):
-                #st.write("Player found!")
             if any(name.upper() in n for n in possible_names):
                 found = True
                 with (st.expander(f"{full_name} ({team} - {pos})")):
                     # st.write("Player", i)
-                    # if st.button("***:rainbow[COMPARE PLAYER]***"):
-                    # st.balloons()
+                    #if st.button(f"Compare {player}"):
                     st.write("**Full name:**", full_name)
                     col7, col8, col9 = st.columns(3)
                     with col7:
