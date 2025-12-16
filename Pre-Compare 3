@@ -1,4 +1,5 @@
 from logging import lastResort
+
 import streamlit
 import streamlit as st
 import requests
@@ -54,11 +55,26 @@ for i in range(0, 20):
 
 # Sidebar for navigation
 option = st.sidebar.selectbox("Menu", ["Home", "Search Players", "Compare Players", "Teams", "Experimentation", "Historic Data"])
-colour = st.sidebar.radio("Colour:", ["RED", "ORANGE", "GREEN", "BLUE", "PURPLE"])
+colour = st.sidebar.radio("Colour:", ["RED", "ORANGE", "YELLOW", "GREEN", "BLUE", "PURPLE"])
+colourtest = st.sidebar.color_picker("Maybe one day this will do something:")
+if st.sidebar.button("***:rainbow[Send balloons!]***"):
+    st.balloons()
+if st.sidebar.button("***:rainbow[Send stars!]***"):
+    youtube_url = "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+    st.markdown(
+        """
+        <iframe width="560" height="315"
+        src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+        frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        """,
+        unsafe_allow_html=True
+    )
 if colour == "RED":
     st.title("***:red[YellowFPL]***")
 elif colour == "ORANGE":
     st.title("***:orange[YellowFPL]***")
+elif colour == "YELLOW":
+    st.title("***:yellow[YellowFPL]***")
 elif colour == "GREEN":
     st.title("***:green[YellowFPL]***")
 elif colour == "BLUE":
@@ -68,20 +84,8 @@ elif colour == "PURPLE":
 if option == "Home":
     st.write("Welcome to YellowFPL - Your Fantasy Premier League assistant!")
     st.write("Use the sidebar to navigate to different features.")
-    if st.button("***:rainbow[Send balloons!]***"):
-        st.balloons()
-    if st.button("***:rainbow[Send stars!]***"):
-        youtube_url = "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
-        st.markdown(
-            """
-            <iframe width="560" height="315"
-            src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
-            frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-            """,
-            unsafe_allow_html=True
-        )
-    colour = st.color_picker("Pick a color")
-    st.slider("Pick a number", 0.0, 14.5, 0.1)
+    st.subheader("About HGA Rating")
+    st.write("HGA Rating is my attempt at creating my own FPL statistic which checks how good a player played against their current fixture in the current season and the last, comparing it to a player's normal points average. Currently: [Average Points against current fixture / ppg]")
 
 elif option == "Search Players":
     st.header("Player search")
