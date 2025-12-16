@@ -1,0 +1,398 @@
+from logging import lastResort
+
+import streamlit
+import streamlit as st
+import requests
+import pandas as pd
+import time
+import unicodedata
+from io import StringIO
+
+url = "https://fantasy.premierleague.com/api/bootstrap-static/"
+last_season_url = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2024-25/gws/merged_gw.csv"
+last_season_teams_url = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/refs/heads/master/data/2024-25/teams.csv"
+the_data = requests.get(url).json()
+players_df = pd.DataFrame(the_data['elements']) # Player stats
+players_df.set_index('id', inplace=True)
+teams_df = pd.DataFrame(the_data['teams'])       # Team info
+
+base_url = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2024-25/gws/gw{}.csv"
+dfs = []
+for gw in range(1, 39):
+    try:
+        url = base_url.format(gw)
+        resp = requests.get(url)
+        resp.raise_for_status()
+        df_gw = pd.read_csv(StringIO(resp.text), on_bad_lines="skip")
+        df_gw["round"] = gw
+        dfs.append(df_gw)
+    except Exception as e:
+        print(f"Could not load GW{gw}: {e}")
+
+last_season_df = pd.concat(dfs, ignore_index=True)
+
+@st.cache_data
+#def load_last_season_data():
+    #response = requests.get(last_season_url, verify=True)  # certifi bundle handles SSL
+    #response.raise_for_status()  # throw error if request fails
+    #return pd.read_csv(StringIO(response.text), on_bad_lines="skip")
+
+def load_last_season_teams_data():
+    response = requests.get(last_season_teams_url, verify=True)  # certifi bundle handles SSL
+    response.raise_for_status()  # throw error if request fails
+    return pd.read_csv(StringIO(response.text), on_bad_lines="skip")
+
+def strip_accents(name):
+    nfd_form = unicodedata.normalize('NFD', name)
+    stripped_text = "".join([c for c in nfd_form if not unicodedata.combining(c)])
+    return stripped_text
+
+#last_season_df = load_last_season_data()
+last_season_teams_df = load_last_season_teams_data()
+last_season_teams_dict = {}
+for i in range(0, 20):
+    last_season_teams_dict[f"{last_season_teams_df['name'][i]}"] = last_season_teams_df['id'][i]
+
+# Sidebar for navigation
+option = st.sidebar.selectbox("Menu", ["Home", "Search Players", "Compare Players", "Teams", "Experimentation", "Historic Data"])
+colour = st.sidebar.radio("Colour:", ["RED", "ORANGE", "GREEN", "BLUE", "PURPLE"])
+if colour == "RED":
+    st.title("***:red[YellowFPL]***")
+elif colour == "ORANGE":
+    st.title("***:orange[YellowFPL]***")
+elif colour == "GREEN":
+    st.title("***:green[YellowFPL]***")
+elif colour == "BLUE":
+    st.title("***:blue[YellowFPL]***")
+elif colour == "PURPLE":
+    st.title("***:violet[YellowFPL]***")
+if option == "Home":
+    st.write("Welcome to YellowFPL - Your Fantasy Premier League assistant!")
+    st.write("Use the sidebar to navigate to different features.")
+    if st.button("***:rainbow[Send balloons!]***"):
+        st.balloons()
+    if st.button("***:rainbow[Send stars!]***"):
+        youtube_url = "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+        st.markdown(
+            """
+            <iframe width="560" height="315"
+            src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+            frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            """,
+            unsafe_allow_html=True
+        )
+    colour = st.color_picker("Pick a color")
+    st.slider("Pick a number", 0.0, 14.5, 0.1)
+
+elif option == "Search Players":
+    st.header("Player search")
+    players = the_data['elements']
+    players = players['can_select' == True]
+    player_dict = {}
+    for i in range(1, len(players_df['first_name']) + 1):
+        if players_df['can_select'][i].item() is True:
+            player_dict[f"{players_df['first_name'][i]} {players_df['second_name'][i]}"] = i
+
+    name = st.selectbox("Select a player", list(player_dict.keys()))
+
+    if name:
+        player_id = player_dict[name]
+        st.write(player_id)
+        history_url = f"https://fantasy.premierleague.com/api/element-summary/{player_id}/"
+        history_data = requests.get(history_url).json()
+
+        player = str(players_df["web_name"][player_id])
+        first_name = str(players_df["first_name"][player_id])
+        last_name = str(players_df["second_name"][player_id])
+        full_name = first_name + " " + last_name
+        ppg = float(players_df["points_per_game"][player_id])
+        price = str(players_df["now_cost"][player_id] / 10)
+        position_id = int(players_df["element_type"][player_id])
+        team_id = int(players_df["team"][player_id])
+        g_a = int(players_df["goals_scored"][player_id]) + int(players_df["assists"][player_id])
+        goals = int(players_df["goals_scored"][player_id])
+        assists = int(players_df["assists"][player_id])
+        clean_sheets = int(players_df["clean_sheets"][player_id])
+        form = float(players_df["form"][player_id])
+        number90s = float(round(players_df["minutes"][player_id] / 90, 2))
+        starts = int(players_df["starts"][player_id])
+        xG = float(players_df["expected_goals"][player_id])
+        xA = float(players_df["expected_assists"][player_id])
+        selected = float(players_df["selected_by_percent"][player_id])
+        selected_rank = str(players_df["selected_rank"][player_id])
+        ppg_rank = str(players_df["points_per_game_rank"][player_id])
+        form_rank = str(players_df["form_rank"][player_id])
+        price_rank = str(players_df["now_cost_rank"][player_id])
+        pos_selected_rank = str(players_df["selected_rank_type"][player_id])
+        pos_ppg_rank = str(players_df["points_per_game_rank_type"][player_id])
+        pos_form_rank = str(players_df["form_rank_type"][player_id])
+        pos_price_rank = str(players_df["now_cost_rank_type"][player_id])
+        selection_rating = str(players_df["selected_rank"][player_id])
+        def_con = int(players_df["defensive_contribution"][player_id])
+        if number90s < 1:
+            def_con_per_90 = 0
+        else:
+            def_con_per_90 = round(float(def_con / number90s),1)
+        hga_points_total = 0
+
+        # Position of Player
+        if position_id == 1:
+            pos = "Goalkeeper"
+        elif position_id == 2:
+            pos = "Defender"
+        elif position_id == 3:
+            pos = "Midfielder"
+        elif position_id == 4:
+            pos = "Forward"
+        elif position_id == 5:
+            pos = "Manager"
+
+        team = str(teams_df["name"][team_id - 1])
+
+        name = strip_accents(name)
+        if name:
+            history_url = f"https://fantasy.premierleague.com/api/element-summary/{player_id}/"
+            history_data = requests.get(history_url).json()
+            fixtures = pd.DataFrame(history_data["fixtures"])
+            # st.dataframe(fixtures)
+            past_games = pd.DataFrame(history_data["history"])
+            past_games = past_games[
+                ["round", "total_points", "minutes", "goals_scored", "assists", "clean_sheets",
+                 "defensive_contribution"]]
+            # st.subheader(f"Fantasy scores")
+            # st.dataframe(past_games[1])
+            past_seasons = pd.DataFrame(history_data["history_past"])
+            # st.subheader("Past Seasons Summary")
+            # st.dataframe(past_seasons)
+            home_boolean = (fixtures["is_home"][0])
+            if home_boolean:
+                team_vs_id = int(fixtures["team_a"][0])
+            else:
+                team_vs_id = int(fixtures["team_h"][0])
+            team_vs = str(teams_df["name"][team_vs_id - 1])
+
+
+            if team_vs == "Leeds" or team_vs == "Burnley" or team_vs == "Sunderland":
+                hga_rating = "N/A"
+            else:
+                last_season_team_vs_id = last_season_teams_dict[team_vs]
+                player_col = "name" if "name" in last_season_df.columns else "web_name"
+                last_season_team_vs_df = last_season_df[(last_season_df["opponent_team"] == last_season_team_vs_id) & (last_season_df[player_col] == name)]
+                #last_season_team_vs_df = [["round","xP","total_points"]]
+                for i in range(len(last_season_team_vs_df)):
+                    hga_points_total += last_season_team_vs_df.iloc[i]["total_points"]
+                if len(last_season_team_vs_df) == 0 or number90s == 0:
+                    hga_rating = 0
+                else:
+                    hga_points_avg = hga_points_total/len(last_season_team_vs_df)
+                    hga_rating = hga_points_avg/ppg
+
+            st.write("**Full name:**", full_name)
+            col7, col8, col9 = st.columns(3)
+            with col7:
+                st.write("**Team:**", team)
+            with col8:
+                st.write("**Position:**", pos)
+            with col9:
+                st.write("**Price:**", "£" + price + "m")
+            st.write("**Current Fixture:**", team_vs)
+
+            if number90s > 0:
+                st.subheader(f"Past Games vs current fixture")
+                try:
+                    st.dataframe(last_season_team_vs_df)
+                except:
+                    st.error("Playing a newly promoted team!")
+
+                st.markdown("---")
+                st.subheader("*My indicators (Out of 10):*")
+
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Selection rating", selection_rating)
+                with col2:
+                    st.metric("HGA Rating", hga_rating, )
+                # with col3:
+                # st.metric("Team HGA Rating", form_rank)
+
+                st.markdown("---")
+
+                st.subheader("*FPL indicators:*")
+
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Selected rank", selected_rank)
+                    st.metric("By Position:", pos_selected_rank)
+                    st.write("**Selected by:**", selected, "%")
+                with col2:
+                    st.metric("PPG rank", ppg_rank)
+                    st.metric("By Position:", pos_ppg_rank)
+                    st.write("**Points per game:**", ppg)
+                with col3:
+                    st.metric("Form rank", form_rank)
+                    st.metric("By Position:", pos_form_rank)
+                    st.write("**Form:**", form)
+
+                st.write("Defensive contributions:", def_con, "| Per 90:", def_con_per_90)
+                st.markdown("---")
+                st.subheader("*Football stats:*")
+                col4, col5, col6 = st.columns(3)
+                with col4:
+                    st.write("**Starts:**", starts)
+                    st.write("**Full 90s completed:**", number90s)
+                    st.write("**Clean Sheets:**", clean_sheets)
+                with col5:
+                    st.write("**Goals:**", goals)
+                    st.write("**xG:**", xG)
+                    st.write("**Total G/A:**", g_a)
+                with col6:
+                    st.write("**Assists:**", assists)
+                    st.write("**xA:**", xA)
+                st.markdown("---")
+
+                past_games = pd.DataFrame(history_data["history"])
+                past_games = past_games[["round", "total_points", "minutes", "goals_scored", "assists", "clean_sheets"]]
+                st.subheader(f"Fantasy scores")
+                st.dataframe(past_games)
+                past_seasons = pd.DataFrame(history_data["history_past"])
+                st.subheader("Past Seasons Summary")
+                st.dataframe(past_seasons)
+            else:
+                st.markdown("---")
+                st.markdown(
+                    """
+                    <div style='background-color: #f05a5a; padding: 10px; border-radius: 5px; 
+                                color: white; text-align: center; font-weight: bold;'>
+                        HASN"T PLAYED AT ALL THIS YEAR!
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+elif option == "Historic Data":
+    #AI did this one when I prompted for help for the other part, kept cause why not
+
+    st.title("FPL 2024-25 Gameweek Data")
+
+    URL = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/refs/heads/master/data/2024-25/gws/merged_gw.csv"
+
+    df = last_season_df
+
+    # Figure out correct player column (name vs web_name)
+    player_col = "name" if "name" in df.columns else "web_name"
+
+    # Gameweek selector
+    gameweeks = sorted(df["round"].dropna().unique())
+    selected_gw = st.selectbox("Select Gameweek", gameweeks)
+
+    # Player selector
+    players = sorted(df[df["round"] == selected_gw][player_col].dropna().unique())
+    selected_player = st.selectbox("Select Player", players)
+
+    # Filtered data
+    filtered = df[(df["round"] == selected_gw) & (df[player_col] == selected_player)]
+    st.subheader(f"Stats for {selected_player} - GW {selected_gw}")
+    st.dataframe(filtered)
+
+    # Season summary for player
+    season_summary = df[df[player_col] == selected_player][["round", "total_points"]]
+    st.subheader(f"Season Summary for {selected_player}")
+    st.line_chart(season_summary.set_index("round"))
+
+
+#elif option == "Testing":
+    # 1️⃣ Get all players and teams from FPL API
+    bootstrap_url = "https://fantasy.premierleague.com/api/bootstrap-static/"
+    data = requests.get(bootstrap_url).json()
+
+    # Create player name -> ID mapping
+    players = data["elements"]
+    player_dict = {f"{p['first_name']} {p['second_name']}": p['id'] for p in players}
+
+    # 2️⃣ Select a player
+    selected_player = st.selectbox("Select a player", list(player_dict.keys()))
+
+    if selected_player:
+        player_id = player_dict[selected_player]
+        st.write(player_id)
+        history_url = f"https://fantasy.premierleague.com/api/element-summary/{player_id}/"
+        history_data = requests.get(history_url).json()
+
+        # 3️⃣ Get past gameweek scores
+        past_games = pd.DataFrame(history_data["history"])
+
+        # Select columns you want
+        past_games = past_games[["round", "total_points", "minutes", "goals_scored", "assists", "clean_sheets"]]
+
+        st.subheader(f"Fantasy scores for {selected_player}")
+        st.dataframe(past_games)
+
+        # Optional: show season history
+        past_seasons = pd.DataFrame(history_data["history_past"])
+        st.subheader("Past Seasons Summary")
+        st.dataframe(past_seasons)
+
+elif option == "Experimentation":
+    st.header("*The dataframe*")
+    st.write("Max GW in file:", last_season_df["round"].max())
+    st.dataframe(last_season_df)
+    st.dataframe(last_season_teams_df)
+    st.dataframe(players_df)
+    st.dataframe(teams_df)
+    st.metric("HGA", 30, -10)
+
+    st.write("Most objects")  # df, err, func, keras!
+    st.write(["st", "is <", 3])
+    st.write_stream(data)
+    st.text("Fixed width text huh")
+    st.markdown("_Markdown_")
+    st.latex(r""" e^{i\pi} + 1 = 0 """)
+    st.title("My title")
+    st.header("My header")
+    st.subheader("My sub")
+    st.badge("New")
+    st.html("<p>Hi!</p>")
+    st.table(players_df.iloc[0:10])
+    st.json({"foo": "bar", "fu": "ba"})
+
+    # Two equal columns:
+    col1, col2 = st.columns(2)
+    col1.write("This is column 1")
+    col2.write("This is column 2")
+
+    # Three different columns:
+    col1, col2, col3 = st.columns([3, 1, 1])
+    # col1 is larger.
+
+    # Bottom-aligned columns
+    col1, col2 = st.columns(2, vertical_alignment="bottom")
+
+    # You can also use "with" notation:
+    with col1:
+        st.radio("Select one:", [1, 2])
+
+    st.context.cookies
+    st.context.headers
+    st.context.ip_address
+    st.context.is_embedded
+    st.context.locale
+    st.context.theme.type
+    st.context.timezone
+    st.context.timezone_offset
+    st.context.url
+
+#class Player:
+   # def __init__(self, name, point):
+      #  self.name = name
+      #  self.point = point
+
+    #def compare(self, another_player):
+     #   if self.point > another_player.point:
+     #       print(self.name, "has more points.")
+      #  else: print(another_player.name, "has more points.")
+
+#a = Player("Eric")
+#print(a.name, a.point)
+
+#b = Player("Isaac", 100)
+#a.compare(b)
