@@ -1,7 +1,11 @@
-import streamlit as st
+import copy, streamlit as st, pandas as pd
 
 player_array = []
 t1_array = []
+if "compare_array" not in st.session_state:
+    st.session_state.compare_array = []
+if "compare_df" not in st.session_state:
+    st.session_state.compare_df = pd.DataFrame()
 
 class Player:
     def __init__(self, name, rating, primary_pos, secondary_pos, set, ht, wt, ins, mid, three, plk, itd, prd, reb, ath):
@@ -10,10 +14,10 @@ class Player:
         self.primary_pos = primary_pos
         self.secondary_pos = secondary_pos
         self.set = set
-        self.ht = ht
-        self.wt = str(wt) + "lbs"
         self.desc = ""
         self.pic = ""
+        self.ht = ht
+        self.wt = str(wt) + "lbs"
         self.ins = ins
         self.mid = mid
         self.three = three
@@ -31,6 +35,42 @@ class Player:
         self.fgp = -1
         self.three_p = -1
         self.ftp = -1
+        self.compare = False
+
+    def clone(self):
+            return copy.deepcopy(self)
+
+    def convert_positions(self):
+        if self.secondary_pos == "":
+            positions = self.primary_pos
+        else:
+            positions = self.primary_pos+"/"+self.secondary_pos
+        return positions
+
+    def to_dict(self):
+        return {"Name": self.name,
+        "Rating": self.rating,
+        "Positions": self.convert_positions(),
+        "Height":      self.ht,
+        "Weight":      self.wt,
+        "Inside Scoring":     self.ins,
+        "Mid Range Shooting":     self.mid,
+        "3PT Shooting":   self.three,
+        "Playmaking":     self.plk,
+        "Interior Defense":     self.itd,
+        "Perimeter Defense":     self.prd,
+        "Rebounding":     self.reb,
+        "Athleticism":     self.ath,
+        "PPG":     self.ppg,
+        "RPG":     self.rpg,
+        "APG":     self.apg,
+        "MPG":     self.mpg,
+        "SPG":     self.spg,
+        "BPG":     self.bpg,
+        "FG%":     self.fgp,
+        "3P%": self.three_p,
+        "FT%":     self.ftp,
+    }
 
 def load(file, array):
     try:
@@ -60,6 +100,8 @@ def load(file, array):
         print("File not found")
 
 def display_player(player):
+    added_confirm = False
+    added_already = False
     secondary = ""
     if player.secondary_pos != "":
         secondary = "/" + player.secondary_pos
@@ -68,7 +110,30 @@ def display_player(player):
         with col_left:
             if player.pic != "":
                 st.image(player.pic)
-            st.button("Compare Player", key=f"compare_button_{player.name}")
+            if st.button("Compare Player", key=f"compare_button_{player.name}"):
+                already_added = any(p.name == player.name for p in st.session_state.compare_array)
+                if not already_added:
+                    added_confirm = True
+                    st.session_state.compare_array.append(player.clone())
+                else:
+                    added_already = True
+        if added_confirm:
+            st.markdown(
+                f"""
+                    <div style='background-color: #213d25; padding: 10px; border-radius: 5px; 
+                    color: #68e27b; text-align: center; font-weight: italic;'>
+                    {player.name} added to compare!</div>
+                    """,
+                unsafe_allow_html=True)
+        elif added_already:
+            st.markdown(
+                f"""
+                <div style='background-color: #3d421f; padding: 10px; border-radius: 5px; 
+                            color: #ffff8a; text-align: center; font-weight: italic;'>
+                 {player.name} already added to compare!
+                </div>
+                """,
+                unsafe_allow_html=True)
         with col_right:
             st.subheader(f"Set: *{player.set}*")
             st.subheader(f"Height: *{player.ht}*")
@@ -125,6 +190,9 @@ def display_player(player):
             st.metric(f"**APG**", player.apg)
             st.metric(f"**BPG**", player.bpg)
             st.metric(f"**FT%**", player.ftp)
+
+def load_to_df(array):
+    st.session_state.compare_df = pd.DataFrame([obj.to_dict() for obj in array])
 
 def add_desc(file, array):
     try:
@@ -222,6 +290,7 @@ def reset():
     st.session_state.sec_choice = False
     st.session_state.max_a_choice = "S"
     st.session_state.min_a_choice = "F"
+
 #MAIN STARTS HERE
 load("tier1.txt", t1_array)
 load("test.txt", player_array)
@@ -248,10 +317,10 @@ if option == "Home":
             unsafe_allow_html=True
         )
     st.subheader("Additional Information:")
-    st.write("> Stats are from regular season test simulations, rounded up ")
-    st.write("> Players in sets 2020-2026 have their ratings based on potential.")
-    st.write("> Playoffs: 8 Man Rotation, Time towards bench - 35")
-    st.write("> Regular Season: 9 Man Rotation, Time towards bench - 50")
+    st.write("Stats are from regular season test simulations, rounded up ")
+    st.write("Players in sets 2020-2026 have their ratings based on potential.")
+    st.write("Playoffs: 8 Man Rotation, Time towards bench - 35")
+    st.write("Regular Season: 9 Man Rotation, Time towards bench - 50")
 
 elif option == "Guide":
     st.title("GUIDE:")
@@ -313,6 +382,21 @@ elif option == "Search Players":
 
 elif option == "Compare Players":
     st.header("*Compare Players:*")
+    if st.button(":yellow[Reset compare]", key="reset_compare"):
+        st.session_state.compare_array = []
+        st.rerun()
+    if st.session_state.compare_array:
+        player_names = [p.name for p in st.session_state.compare_array]
+        col_remove_select, col_remove_button = st.columns([6,6], vertical_alignment="bottom")
+        with col_remove_select:
+            player_remove = st.selectbox("Remove player:", player_names)
+        with col_remove_button:
+            if st.button(":red[Remove]"):
+                st.session_state.compare_array = [p for p in st.session_state.compare_array if p.name != player_remove]
+                st.rerun()
+    st.subheader("*Click on a player and click compare player to add here:*")
+    load_to_df(st.session_state.compare_array)
+    st.session_state.compare_df.T
 
 elif option == "Teams":
     st.header("*Teams:*")
